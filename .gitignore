@@ -24,3 +24,5 @@ data/puzzles/*
 
 # Dhat
 dhat-heap.json
+
+.idea/
