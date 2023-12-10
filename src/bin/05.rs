@@ -1,5 +1,8 @@
 use std::str::FromStr;
+use std::sync::Arc;
+use std::sync::mpsc::channel;
 use itertools::Itertools;
+use threadpool::ThreadPool;
 advent_of_code::solution!(5);
 
 #[derive(Debug, PartialEq)]
@@ -47,6 +50,9 @@ struct SeedRange {
 impl SeedRange {
     fn seeds(&self) -> impl Iterator<Item=u64> {
         (self.source_start..self.source_start + self.length).into_iter()
+    }
+    fn seed_count(&self) -> u64 {
+        self.length
     }
 }
 
@@ -145,6 +151,11 @@ impl FromStr for AlmanacSeedRange {
         Ok(AlmanacSeedRange { seed_ranges, maps })
     }
 }
+impl AlmanacSeedRange {
+    fn seed_count(&self) -> u64 {
+        self.seed_ranges.iter().map(|seed_range| seed_range.seed_count()).sum()
+    }
+}
 
 pub fn part_one(input: &str) -> Option<u64> {
     let almanac = input.parse::<Almanac>().unwrap();
@@ -152,20 +163,27 @@ pub fn part_one(input: &str) -> Option<u64> {
 }
 
 pub fn part_two(input: &str) -> Option<u64> {
+    let num_threads = 15;
     let almanac = input.parse::<AlmanacSeedRange>().unwrap();
-    almanac
-        .seed_ranges.iter().map(
-        |seed_range|
-            seed_range
-                .seeds().map(
-                |seed|
-                    almanac.maps.iter().fold(
-                        seed,
-                        |value, map|
-                            map.mapped_value(value)
-                    )
-            ).min().unwrap()
-    ).min().into()
+    let pool = ThreadPool::new(num_threads);
+    let almanac = Arc::new(almanac);
+    let seed_count = almanac.seed_count();
+    let chunk_size = seed_count / num_threads as u64 + 1;
+
+    let (tx, rx) = channel();
+    let mut work_count = 0;
+    for chunk in &almanac.seed_ranges.iter().flat_map(|seed_range| seed_range.seeds()).chunks(chunk_size as usize) {
+        work_count += 1;
+        let tx = tx.clone();
+        let arc_almanac = almanac.clone();
+        let chunk = chunk.collect::<Vec<u64>>().clone();
+        pool.execute(move || {
+            let result = chunk.iter().map(|&seed| arc_almanac.maps.iter().fold(seed, |value, map| map.mapped_value(value))).min().unwrap();
+            tx.send(result).unwrap();
+        });
+    }
+
+    Some(rx.iter().take(work_count).min().unwrap())
 }
 
 #[cfg(test)]
