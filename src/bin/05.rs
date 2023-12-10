@@ -1,3 +1,4 @@
+use std::cmp::min;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::mpsc::channel;
@@ -41,19 +42,10 @@ impl Range {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 struct SeedRange {
     source_start: u64,
     length: u64,
-}
-
-impl SeedRange {
-    fn seeds(&self) -> impl Iterator<Item=u64> {
-        (self.source_start..self.source_start + self.length).into_iter()
-    }
-    fn seed_count(&self) -> u64 {
-        self.length
-    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -151,9 +143,29 @@ impl FromStr for AlmanacSeedRange {
         Ok(AlmanacSeedRange { seed_ranges, maps })
     }
 }
+
 impl AlmanacSeedRange {
-    fn seed_count(&self) -> u64 {
-        self.seed_ranges.iter().map(|seed_range| seed_range.seed_count()).sum()
+    fn calculate_for_seed(&self, seed: u64) -> u64 {
+        self.maps.iter().fold(seed, |value, map| map.mapped_value(value))
+    }
+    fn calculate_for_seed_range(&self, start: u64, length: u64) -> u64 {
+        if length == 1 {
+            return min(self.calculate_for_seed(start), self.calculate_for_seed(start + 1));
+        }
+        let step = length / 2;
+
+        let start_value = self.calculate_for_seed(start);
+        let middle_value = self.calculate_for_seed(start + step);
+        let end_value = self.calculate_for_seed(start + length);
+
+        let mut min_value = u64::MAX;
+        if start_value + step != middle_value {
+            min_value = self.calculate_for_seed_range(start, step);
+        }
+        if middle_value + (length - step) != end_value {
+            min_value = min(min_value, self.calculate_for_seed_range(start + step, length - step));
+        }
+        min_value
     }
 }
 
@@ -163,22 +175,20 @@ pub fn part_one(input: &str) -> Option<u64> {
 }
 
 pub fn part_two(input: &str) -> Option<u64> {
-    let num_threads = 15;
+    let num_threads = 4;
     let almanac = input.parse::<AlmanacSeedRange>().unwrap();
     let pool = ThreadPool::new(num_threads);
     let almanac = Arc::new(almanac);
-    let seed_count = almanac.seed_count();
-    let chunk_size = seed_count / num_threads as u64 + 1;
 
     let (tx, rx) = channel();
     let mut work_count = 0;
-    for chunk in &almanac.seed_ranges.iter().flat_map(|seed_range| seed_range.seeds()).chunks(chunk_size as usize) {
+    for seed_range in almanac.seed_ranges.clone() {
         work_count += 1;
         let tx = tx.clone();
         let arc_almanac = almanac.clone();
-        let chunk = chunk.collect::<Vec<u64>>().clone();
+        let seed_range = seed_range.clone();
         pool.execute(move || {
-            let result = chunk.iter().map(|&seed| arc_almanac.maps.iter().fold(seed, |value, map| map.mapped_value(value))).min().unwrap();
+            let result = arc_almanac.calculate_for_seed_range(seed_range.source_start, seed_range.length);
             tx.send(result).unwrap();
         });
     }
