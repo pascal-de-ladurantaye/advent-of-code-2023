@@ -1,8 +1,8 @@
+use itertools::Itertools;
 use std::cmp::min;
 use std::str::FromStr;
-use std::sync::Arc;
 use std::sync::mpsc::channel;
-use itertools::Itertools;
+use std::sync::Arc;
 use threadpool::ThreadPool;
 advent_of_code::solution!(5);
 
@@ -20,7 +20,10 @@ impl FromStr for Range {
     type Err = RangeParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut numbers_iter = s.split_whitespace().filter(|s| !s.is_empty()).map(|s| s.parse::<u64>().unwrap());
+        let mut numbers_iter = s
+            .split_whitespace()
+            .filter(|s| !s.is_empty())
+            .map(|s| s.parse::<u64>().unwrap());
         let destination_start = numbers_iter.next().unwrap();
         let source_start = numbers_iter.next().unwrap();
         let length = numbers_iter.next().unwrap();
@@ -84,7 +87,15 @@ impl FromStr for Almanac {
 
         // seeds
         let mut lines = all_lines.by_ref().take_while(|line| !line.is_empty());
-        for seed in lines.next().unwrap().split(":").nth(1).unwrap().split_whitespace().filter(|s| !s.is_empty()) {
+        for seed in lines
+            .next()
+            .unwrap()
+            .split(":")
+            .nth(1)
+            .unwrap()
+            .split_whitespace()
+            .filter(|s| !s.is_empty())
+        {
             seeds.push(seed.parse::<u64>().unwrap());
         }
         all_lines.next();
@@ -127,7 +138,10 @@ impl FromStr for AlmanacSeedRange {
         for mut chunk in &seeds.split_whitespace().filter(|s| !s.is_empty()).chunks(2) {
             let source_start = chunk.next().unwrap().parse::<u64>().unwrap();
             let length = chunk.next().unwrap().parse::<u64>().unwrap();
-            seed_ranges.push(SeedRange { source_start, length });
+            seed_ranges.push(SeedRange {
+                source_start,
+                length,
+            });
         }
         all_lines.next();
 
@@ -146,11 +160,16 @@ impl FromStr for AlmanacSeedRange {
 
 impl AlmanacSeedRange {
     fn calculate_for_seed(&self, seed: u64) -> u64 {
-        self.maps.iter().fold(seed, |value, map| map.mapped_value(value))
+        self.maps
+            .iter()
+            .fold(seed, |value, map| map.mapped_value(value))
     }
     fn calculate_for_seed_range(&self, start: u64, length: u64) -> u64 {
         if length == 1 {
-            return min(self.calculate_for_seed(start), self.calculate_for_seed(start + 1));
+            return min(
+                self.calculate_for_seed(start),
+                self.calculate_for_seed(start + 1),
+            );
         }
         let step = length / 2;
 
@@ -163,7 +182,10 @@ impl AlmanacSeedRange {
             min_value = self.calculate_for_seed_range(start, step);
         }
         if middle_value + (length - step) != end_value {
-            min_value = min(min_value, self.calculate_for_seed_range(start + step, length - step));
+            min_value = min(
+                min_value,
+                self.calculate_for_seed_range(start + step, length - step),
+            );
         }
         min_value
     }
@@ -171,7 +193,17 @@ impl AlmanacSeedRange {
 
 pub fn part_one(input: &str) -> Option<u64> {
     let almanac = input.parse::<Almanac>().unwrap();
-    almanac.seeds.iter().map(|seed| almanac.maps.iter().fold(*seed, |value, map| map.mapped_value(value))).min().into()
+    almanac
+        .seeds
+        .iter()
+        .map(|seed| {
+            almanac
+                .maps
+                .iter()
+                .fold(*seed, |value, map| map.mapped_value(value))
+        })
+        .min()
+        .into()
 }
 
 pub fn part_two(input: &str) -> Option<u64> {
@@ -188,7 +220,8 @@ pub fn part_two(input: &str) -> Option<u64> {
         let arc_almanac = almanac.clone();
         let seed_range = seed_range.clone();
         pool.execute(move || {
-            let result = arc_almanac.calculate_for_seed_range(seed_range.source_start, seed_range.length);
+            let result =
+                arc_almanac.calculate_for_seed_range(seed_range.source_start, seed_range.length);
             tx.send(result).unwrap();
         });
     }
@@ -288,58 +321,46 @@ humidity-to-location map:
                     ],
                 },
                 Map {
-                    ranges: vec![
-                        Range {
-                            source_start: 15,
-                            destination_start: 0,
-                            length: 37,
-                        },
-                    ],
+                    ranges: vec![Range {
+                        source_start: 15,
+                        destination_start: 0,
+                        length: 37,
+                    }],
                 },
                 Map {
-                    ranges: vec![
-                        Range {
-                            source_start: 53,
-                            destination_start: 49,
-                            length: 8,
-                        },
-                    ],
+                    ranges: vec![Range {
+                        source_start: 53,
+                        destination_start: 49,
+                        length: 8,
+                    }],
                 },
                 Map {
-                    ranges: vec![
-                        Range {
-                            source_start: 18,
-                            destination_start: 88,
-                            length: 7,
-                        },
-                    ],
+                    ranges: vec![Range {
+                        source_start: 18,
+                        destination_start: 88,
+                        length: 7,
+                    }],
                 },
                 Map {
-                    ranges: vec![
-                        Range {
-                            source_start: 77,
-                            destination_start: 45,
-                            length: 23,
-                        },
-                    ],
+                    ranges: vec![Range {
+                        source_start: 77,
+                        destination_start: 45,
+                        length: 23,
+                    }],
                 },
                 Map {
-                    ranges: vec![
-                        Range {
-                            source_start: 69,
-                            destination_start: 0,
-                            length: 1,
-                        },
-                    ],
+                    ranges: vec![Range {
+                        source_start: 69,
+                        destination_start: 0,
+                        length: 1,
+                    }],
                 },
                 Map {
-                    ranges: vec![
-                        Range {
-                            source_start: 56,
-                            destination_start: 60,
-                            length: 37,
-                        },
-                    ],
+                    ranges: vec![Range {
+                        source_start: 56,
+                        destination_start: 60,
+                        length: 37,
+                    }],
                 },
             ],
         };
@@ -402,58 +423,46 @@ humidity-to-location map:
                     ],
                 },
                 Map {
-                    ranges: vec![
-                        Range {
-                            source_start: 15,
-                            destination_start: 0,
-                            length: 37,
-                        },
-                    ],
+                    ranges: vec![Range {
+                        source_start: 15,
+                        destination_start: 0,
+                        length: 37,
+                    }],
                 },
                 Map {
-                    ranges: vec![
-                        Range {
-                            source_start: 53,
-                            destination_start: 49,
-                            length: 8,
-                        },
-                    ],
+                    ranges: vec![Range {
+                        source_start: 53,
+                        destination_start: 49,
+                        length: 8,
+                    }],
                 },
                 Map {
-                    ranges: vec![
-                        Range {
-                            source_start: 18,
-                            destination_start: 88,
-                            length: 7,
-                        },
-                    ],
+                    ranges: vec![Range {
+                        source_start: 18,
+                        destination_start: 88,
+                        length: 7,
+                    }],
                 },
                 Map {
-                    ranges: vec![
-                        Range {
-                            source_start: 77,
-                            destination_start: 45,
-                            length: 23,
-                        },
-                    ],
+                    ranges: vec![Range {
+                        source_start: 77,
+                        destination_start: 45,
+                        length: 23,
+                    }],
                 },
                 Map {
-                    ranges: vec![
-                        Range {
-                            source_start: 69,
-                            destination_start: 0,
-                            length: 1,
-                        },
-                    ],
+                    ranges: vec![Range {
+                        source_start: 69,
+                        destination_start: 0,
+                        length: 1,
+                    }],
                 },
                 Map {
-                    ranges: vec![
-                        Range {
-                            source_start: 56,
-                            destination_start: 60,
-                            length: 37,
-                        },
-                    ],
+                    ranges: vec![Range {
+                        source_start: 56,
+                        destination_start: 60,
+                        length: 37,
+                    }],
                 },
             ],
         };

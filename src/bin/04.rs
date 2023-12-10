@@ -2,7 +2,6 @@ use std::collections::HashSet;
 use std::str::FromStr;
 advent_of_code::solution!(4);
 
-
 #[derive(Debug, PartialEq, Eq, Clone)]
 struct Card {
     index: usize,
@@ -35,7 +34,14 @@ impl FromStr for Card {
         let mut numbers_hash = HashSet::with_capacity(25);
         let mut card_index = 0;
         if let Some((card_id_str, numbers)) = s.split_once(":") {
-            card_index = card_id_str.split_whitespace().filter(|s| !s.is_empty()).last().unwrap().parse::<usize>().unwrap() - 1;
+            card_index = card_id_str
+                .split_whitespace()
+                .filter(|s| !s.is_empty())
+                .last()
+                .unwrap()
+                .parse::<usize>()
+                .unwrap()
+                - 1;
             if let Some((winning_numbers, numbers)) = numbers.split_once("|") {
                 for number in winning_numbers.split_whitespace().filter(|s| !s.is_empty()) {
                     winning_numbers_hash.insert(number.parse::<usize>().unwrap());
@@ -59,7 +65,7 @@ pub fn part_one(input: &str) -> Option<u32> {
             .lines()
             .map(|line| line.parse::<Card>().unwrap())
             .map(|card| card.score())
-            .sum::<usize>() as u32
+            .sum::<usize>() as u32,
     )
 }
 
@@ -75,7 +81,9 @@ pub fn part_two(input: &str) -> Option<u32> {
             continue;
         }
         let card_amount = card_counts_per_id[card.index];
-        for additional_card_id in card_counts_per_id[card.index + 1..=card.index + card.winning_count()].iter_mut() {
+        for additional_card_id in
+            card_counts_per_id[card.index + 1..=card.index + card.winning_count()].iter_mut()
+        {
             *additional_card_id += card_amount;
         }
     }
