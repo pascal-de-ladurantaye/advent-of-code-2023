@@ -19,6 +19,7 @@ pico-args = "0.5.0"
 dhat = { version = "0.3.2", optional = true }
 itertools = { version = "0.12.0", features = [] }
 threadpool = "1.8.1"
+primes = "0.3.0"
 
 [profile.dhat]
 inherits = "release"
